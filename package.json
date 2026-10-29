@@ -1,0 +1,15 @@
+
+{
+  "name": "yournizamo-ai",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "dependencies": {
+    "@runwayml/sdk": "^3.0.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}
