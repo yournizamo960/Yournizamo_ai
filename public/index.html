@@ -1,0 +1,137 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YourNizamo AI</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;min-height:100vh;padding:25px 15px;
+ font-family:Arial,sans-serif;color:white;
+ background:radial-gradient(circle at top,#18284b,#080b13 55%,#030508);
+}
+main{
+ max-width:650px;margin:55px auto;padding:30px;
+ background:#0b101c;border:1px solid #24334d;
+ border-radius:22px;box-shadow:0 10px 45px #0055ff22;
+}
+h1{text-align:center;font-size:32px}
+h1 span{color:#55a5ff}
+p{text-align:center;color:#aab7ca;line-height:1.6}
+label{display:block;margin:22px 0 9px}
+textarea,select{
+ width:100%;padding:14px;border-radius:12px;
+ border:1px solid #34445f;background:#080d17;
+ color:white;font-size:16px;
+}
+textarea{height:125px;resize:vertical}
+button{
+ width:100%;padding:15px;margin-top:18px;
+ border:0;border-radius:12px;background:#1769e8;
+ color:white;font-size:17px;font-weight:bold;
+}
+button:disabled{opacity:.6}
+#status{text-align:center;margin:20px 0;color:#8dbbff}
+video{width:100%;margin-top:15px;border-radius:14px}
+a{color:#83baff}
+footer{text-align:center;color:#66758d;margin-top:25px;font-size:13px}
+</style>
+</head>
+<body>
+<main>
+<h1>YourNizamo <span>AI</span></h1>
+<p>Turn your ideas into cinematic AI videos.</p>
+
+<label for="prompt">Describe your video</label>
+<textarea id="prompt" maxlength="1000"
+placeholder="A cinematic mountain scene with moving clouds and golden sunlight..."></textarea>
+
+<label for="ratio">Video format</label>
+<select id="ratio">
+<option value="1280:720">Landscape (16:9)</option>
+<option value="720:1280">Portrait (9:16)</option>
+</select>
+
+<button id="generate" onclick="generateVideo()">Generate 10-second video</button>
+<div id="status">YourNizamo AI is ready.</div>
+<div id="result"></div>
+<footer>Made with YourNizamo AI</footer>
+</main>
+
+<script>
+const statusBox=document.getElementById("status");
+const button=document.getElementById("generate");
+const result=document.getElementById("result");
+
+async function generateVideo(){
+ const prompt=document.getElementById("prompt").value.trim();
+ const ratio=document.getElementById("ratio").value;
+
+ if(!prompt){
+  statusBox.textContent="Please describe your video first.";
+  return;
+ }
+
+ button.disabled=true;
+ result.innerHTML="";
+ statusBox.textContent="Starting video generation...";
+
+ try{
+  const response=await fetch("/api/generate",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({prompt,ratio})
+  });
+
+  const data=await response.json();
+  if(!response.ok) throw new Error(data.error||"Could not start.");
+
+  statusBox.textContent="Video is being created. Please wait...";
+  await checkStatus(data.id);
+
+ }catch(error){
+  statusBox.textContent=error.message;
+  button.disabled=false;
+ }
+}
+
+async function checkStatus(id){
+ for(let i=0;i<60;i++){
+  await new Promise(resolve=>setTimeout(resolve,10000));
+
+  try{
+   const response=await fetch("/api/status/"+encodeURIComponent(id));
+   const data=await response.json();
+
+   if(!response.ok) throw new Error(data.error||"Status check failed.");
+
+   if(data.status==="SUCCEEDED" && data.videoUrl){
+    statusBox.textContent="Your video is ready!";
+    result.innerHTML=
+     '<video controls playsinline src="'+data.videoUrl+'"></video>'+
+     '<p><a href="'+data.videoUrl+'" target="_blank" rel="noopener">Open or download video</a></p>';
+    button.disabled=false;
+    return;
+   }
+
+   if(data.status==="FAILED"){
+    throw new Error(data.error||"Video generation failed.");
+   }
+
+   statusBox.textContent="Creating video... Status: "+data.status;
+
+  }catch(error){
+   statusBox.textContent=error.message;
+   button.disabled=false;
+   return;
+  }
+ }
+
+ statusBox.textContent="Still processing. Please try checking again later.";
+ button.disabled=false;
+}
+</script>
+</body>
+</html>
